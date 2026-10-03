@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>TABS Mobile - Battlegrounds</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #1a2228;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* TOP UI - UNIFIED NON-OVERLAPPING HUD */
+    #top-hud {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      pointer-events: auto;
+      transition: box-shadow 0.2s;
+    }
+    .game-logo {
+      color: #fff;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.45);
+      padding: 3px 14px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+    .map-toggle-group {
+      display: flex;
+      background: rgba(18, 22, 28, 0.85);
+      padding: 4px;
+      border-radius: 30px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+    }
+    .map-btn {
+      padding: 7px 16px;
+      border: none;
+      border-radius: 25px;
+      background: transparent;
+      color: #b8c4d1;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .map-btn.active {
+      background: #ff5252;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(255, 82, 82, 0.4);
+    }
+    .map-btn:nth-child(2).active {
+      background: #448aff;
+      box-shadow: 0 4px 12px rgba(68, 138, 255, 0.4);
+    }
+
+    #team-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      pointer-events: none;
+    }
+    .team-tag-red {
+      color: #ff5252;
+      background: rgba(255, 82, 82, 0.2);
+      padding: 2px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 82, 82, 0.4);
+    }
+    .team-tag-blue {
+      color: #448aff;
+      background: rgba(68, 138, 255, 0.2);
+      padding: 2px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(68, 138, 255, 0.4);
+    }
+
+    /* MOBILE CONTROLS */
+    #mobile-controls {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    #joystick-zone {
+      position: absolute;
+      bottom: 25px;
+      left: 25px;
+      width: 130px;
+      height: 130px;
+      pointer-events: auto;
+      touch-action: none;
+    }
+    #joystick-base {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(0,0,0,0.3) 100%);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      top: 5px;
+      left: 5px;
+    }
+    #joystick-knob {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ffffff, #d6d6d6);
+      border: 2px solid #ffffff;
+      top: 40px;
+      left: 40px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+      pointer-events: none;
+      transition: transform 0.04s linear;
+    }
+
+    #action-panel {
+      position: absolute;
+      right: 20px;
+      bottom: 25px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: auto;
+    }
+    .action-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      background: rgba(18, 22, 28, 0.75);
+      backdrop-filter: blur(6px);
+      color: #ffffff;
+      font-size: 19px;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      touch-action: none;
+    }
+    .action-btn:active, .action-btn.active {
+      background: rgba(255, 255, 255, 0.4);
+      transform: scale(0.92);
+    }
+    .action-btn.speed-btn {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffd54f;
+    }
+
+    /* SETTINGS BUTTON ON FAR RIGHT */
+    #settings-btn {
+      position: absolute;
+      right: 20px;
+      top: 15px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(18, 22, 28, 0.85);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(6px);
+      color: #fff;
+      font-size: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 20;
+      pointer-events: auto;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+
+    /* SETTINGS MODAL */
+    #settings-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 14, 18, 0.8);
+      backdrop-filter: blur(6px);
+      z-index: 150;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    #settings-modal.active { display: flex; }
+    .settings-card {
+      background: #1c232d;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 20px;
+      padding: 22px 26px;
+      width: 320px;
+      max-width: 90%;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+    .settings-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-align: center;
+      color: #ffd54f;
+    }
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .settings-btn-group {
+      display: flex;
+      gap: 6px;
+    }
+    .settings-pill-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #b8c4d1;
+      padding: 5px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .settings-pill-btn.active {
+      background: #448aff;
+      color: #fff;
+      border-color: #448aff;
+    }
+    .settings-action-btn {
+      background: #2a3544;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .settings-action-btn.primary {
+      background: #ff5252;
+      border-color: #ff5252;
+    }
+
+    /* UI EDIT / MOVE MODE HIGHLIGHT */
+    .ui-draggable-mode {
+      border: 2px dashed #ffd54f !important;
+      cursor: move !important;
+      box-shadow: 0 0 15px rgba(255, 213, 79, 0.6) !important;
+    }
+    #ui-edit-notice {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ffd54f;
+      color: #111;
+      font-weight: 900;
+      font-size: 12px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      z-index: 200;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    #look-hint {
+      position: absolute;
+      bottom: 95px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.4);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      text-transform: uppercase;
+      text-align: center;
+      transition: opacity 0.5s;
+    }
+
+    #desktop-hint {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+      background: rgba(0,0,0,0.4);
+      padding: 3px 12px;
+      border-radius: 10px;
+    }
+    @media (max-width: 768px) { #desktop-hint { display: none; } }
+
+    /* LOADING SCREEN */
+    #loading-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(14, 18, 24, 0.9);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      transition: opacity 0.35s ease;
+      pointer-events: auto;
+    }
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loading-card {
+      background: rgba(28, 34, 44, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 22px 28px;
+      border-radius: 18px;
+      width: 320px;
+      max-width: 85%;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    .loading-title {
+      color: #fff;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .loading-status {
+      color: #8da4be;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      min-height: 24px;
+    }
+    .progress-bar-track {
+      width: 100%;
+      height: 9px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff5252, #ffd54f, #448aff);
+      border-radius: 6px;
+      transition: width 0.08s linear;
+    }
+    .progress-num {
+      margin-top: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #ffd54f;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+
+  <!-- DRAG LAYOUT EDIT MODE NOTICE -->
+  <div id="ui-edit-notice">✏️ UI Layout Mode: Drag controls to move. Tap ⚙️ to save.</div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loading-screen">
+    <div class="loading-card">
+      <div class="loading-title">Sculpting Battlefield</div>
+      <div class="loading-status" id="loading-status-text">Forming Terrain & Perimeter Mountains...</div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="loading-bar-fill"></div>
+      </div>
+      <div class="progress-num" id="loading-percent-text">0%</div>
+    </div>
+  </div>
+
+  <!-- SETTINGS BUTTON -->
+  <div id="settings-btn" title="Settings">⚙️</div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal">
+    <div class="settings-card">
+      <div class="settings-title">Game Settings</div>
+      <div class="settings-row">
+        <span>Shadow Quality:</span>
+        <div class="settings-btn-group">
+          <button class="settings-pill-btn" id="btn-shadow-off">Off</button>
+          <button class="settings-pill-btn active" id="btn-shadow-high">High</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <span>UI Customization:</span>
+      </div>
+      <button class="settings-action-btn" id="btn-toggle-edit-ui">✏️ Move UI Controls</button>
+      <button class="settings-action-btn" id="btn-preset-lefthand">🔄 Swap to Left-Handed</button>
+      <button class="settings-action-btn" id="btn-reset-ui">⏮️ Reset UI Layout</button>
+      <button class="settings-action-btn primary" id="btn-close-settings">Close</button>
+    </div>
+  </div>
+
+  <!-- UNIFIED TOP HUD -->
+  <div id="top-hud">
+    <div class="game-logo">TABS Sandbox</div>
+    <div class="map-toggle-group">
+      <button class="map-btn active" id="btn-map-1">🌲 Medieval Hills</button>
+      <button class="map-btn" id="btn-map-2">🏛️ Ancient Olympus</button>
+    </div>
+    <div id="team-banner">
+      <span class="team-tag-red">RED SIDE</span>
+      <span style="color: rgba(255,255,255,0.4)">VS</span>
+      <span class="team-tag-blue">BLUE SIDE</span>
+    </div>
+  </div>
+
+  <!-- MOBILE HUD -->
+  <div id="mobile-controls">
+    <div id="joystick-zone">
+      <div id="joystick-base"></div>
+      <div id="joystick-knob"></div>
+    </div>
+
+    <div id="action-panel">
+      <button class="action-btn speed-btn" id="btn-speed">1x</button>
+      <button class="action-btn" id="btn-up">▲</button>
+      <button class="action-btn" id="btn-down">▼</button>
+    </div>
+
+    <div id="look-hint">Drag screen anywhere to rotate view ↻</div>
+  </div>
+
+  <div id="desktop-hint">Desktop: WASD to Move | Click & Drag to Look | Space / Shift for Up/Down</div>
+
+  <script>
+    // -------------------------------------------------------------
+    // THREE.JS SETUP & OPTIMIZATIONS
+    // -------------------------------------------------------------
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x82c6eb);
+    scene.fog = new THREE.FogExp2(0x82c6eb, 0.005);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.2, 800);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    container.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.62);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfff5e0, 0.95);
+    sunLight.position.set(70, 110, 60);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 1024;
+    sunLight.shadow.mapSize.height = 1024;
+    sunLight.shadow.camera.near = 10;
+    sunLight.shadow.camera.far = 280;
+    sunLight.shadow.camera.left = -95;
+    sunLight.shadow.camera.right = 95;
+    sunLight.shadow.camera.top = 95;
+    sunLight.shadow.camera.bottom = -95;
+    sunLight.shadow.bias = -0.0004;
+    scene.add(sunLight);
+
+    // -------------------------------------------------------------
+    // SHARED MATERIALS
+    // -------------------------------------------------------------
+    const materials = {
+      terrainVertex: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }),
+      stone: new THREE.MeshLambertMaterial({ color: 0x7c858c, flatShading: true }),
+      woodDark: new THREE.MeshLambertMaterial({ color: 0x4a3222, flatShading: true }),
+      woodLight: new THREE.MeshLambertMaterial({ color: 0x8a6242, flatShading: true }),
+      roofRed: new THREE.MeshLambertMaterial({ color: 0xb53c31, flatShading: true }),
+      roofBlue: new THREE.MeshLambertMaterial({ color: 0x2e6cb5, flatShading: true }),
+      leavesGreen1: new THREE.MeshLambertMaterial({ color: 0x3e8a2a, flatShading: true }),
+      leavesGreen2: new THREE.MeshLambertMaterial({ color: 0x62a832, flatShading: true }),
+      pineNeedles: new THREE.MeshLambertMaterial({ color: 0x254d2e, flatShading: true }),
+      cypressGreen: new THREE.MeshLambertMaterial({ color: 0x224225, flatShading: true }),
+      marbleWhite: new THREE.MeshLambertMaterial({ color: 0xe5e5e5, flatShading: true }),
+      redZone: new THREE.MeshBasicMaterial({ color: 0xff3838 }),
+      blueZone: new THREE.MeshBasicMaterial({ color: 0x2979ff }),
+      unitRed: new THREE.MeshLambertMaterial({ color: 0xe53935 }),
+      unitBlue: new THREE.MeshLambertMaterial({ color: 0x1e88e5 }),
+      unitEyeWhite: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+      unitEyePupil: new THREE.MeshBasicMaterial({ color: 0x111111 })
+    };
+
+    let currentMapGroup = new THREE.Group();
+    scene.add(currentMapGroup);
+
+    let activeMapData = null;
+    let animatables = [];
+
+    // -------------------------------------------------------------
+    // GLOBAL TABS API & MONKEY PATCHING PREPARATION
+    // -------------------------------------------------------------
+    window.TABS = {
+      version: "0.3.0",
+      scene: scene,
+      camera: camera,
+      renderer: renderer,
+      currentMapId: 1,
+      isLoading: false,
+
+      // Zero-lag instantaneous math terrain queries
+      terrain: {
+        getHeightAt: function(x, z) {
+          if (activeMapData && activeMapData.getHeight) {
+            return activeMapData.getHeight(x, z);
+          }
+          return 0;
+        }
+      },
+
+      units: [],
+      unitTypes: {},
+      modules: {},
+
+      // Method Monkey Patching Helper
+      patch: function(methodName, patchFunction) {
+        const originalMethod = this[methodName];
+        if (typeof originalMethod !== 'function') {
+          console.warn(`[TABS] Cannot monkey patch nonexistent method: ${methodName}`);
+          return;
+        }
+        const self = this;
+        this[methodName] = function(...args) {
+          return patchFunction.call(self, originalMethod.bind(self), ...args);
+        };
+        console.log(`[TABS] Successfully monkey-patched method: ${methodName}`);
+      },
+
+      hooks: {
+        beforeUpdate: [],
+        afterUpdate: [],
+        onMapLoaded: [],
+        onUnitSpawned: [],
+        onUnitKilled: []
+      },
+
+      registerModule: function(name, moduleObj) {
+        this.modules[name] = moduleObj;
+        if (typeof moduleObj.init === 'function') moduleObj.init(this);
+        console.log(`[TABS] Module loaded: ${name}`);
+      },
+
+      registerUnitType: function(typeId, config) {
+        this.unitTypes[typeId] = config;
+      },
+
+      spawnUnit: function(typeId, team, x, z, options = {}) {
+        const config = this.unitTypes[typeId];
+        if (!config) return null;
+
+        const unitMesh = config.createMesh ? config.createMesh(team) : createStarterWobbler(team);
+        const groundY = this.terrain.getHeightAt(x, z);
+        unitMesh.position.set(x, groundY + 0.1, z);
+        currentMapGroup.add(unitMesh);
+
+        const unit = {
+          id: Math.random().toString(36).substr(2, 9),
+          type: typeId,
+          team: team,
+          mesh: unitMesh,
+          health: config.maxHealth || 100,
+          speed: config.speed || 3,
+          options: options,
+          update: function(delta) {
+            if (config.update) config.update(this, delta);
+          }
+        };
+
+        this.units.push(unit);
+        this.hooks.onUnitSpawned.forEach(fn => fn(unit));
+        return unit;
+      },
+
+      updateUnits: function(delta) {
+        for (let i = this.units.length - 1; i >= 0; i--) {
+          this.units[i].update(delta);
+        }
+      },
+
+      update: function(delta) {
+        for (let hook of this.hooks.beforeUpdate) hook(delta);
+        this.updateUnits(delta);
+        for (let hook of this.hooks.afterUpdate) hook(delta);
+      }
+    };
+
+    function createStarterWobbler(team = 'red') {
+      const g = new THREE.Group();
+      const bodyMat = team === 'red' ? materials.unitRed : materials.unitBlue;
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.44, 1.3, 8), bodyMat);
+      b.position.y = 0.65;
+      b.castShadow = true;
+      g.add(b);
+
+      const h = new THREE.Mesh(new THREE.SphereGeometry(0.36, 8, 8), bodyMat);
+      h.position.y = 1.5;
+      h.castShadow = true;
+      g.add(h);
+
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), materials.unitEyeWhite);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), materials.unitEyePupil);
+      const e1 = eye.clone(); e1.position.set(-0.13, 1.58, 0.3);
+      const p1 = pupil.clone(); p1.position.set(-0.13, 1.58, 0.38);
+      const e2 = eye.clone(); e2.position.set(0.13, 1.58, 0.3);
+      const p2 = pupil.clone(); p2.position.set(0.13, 1.58, 0.38);
+      g.add(e1, p1, e2, p2);
+      return g;
+    }
+
+    TABS.registerUnitType('peasant', {
+      maxHealth: 100,
+      speed: 3.2,
+      createMesh: createStarterWobbler,
+      update: function(unit, delta) {
+        unit.mesh.rotation.z = Math.sin(Date.now() * 0.005) * 0.07;
+      }
+    });
+
+    // -------------------------------------------------------------
+    // EXCLUSION ZONE & ANTI-NOCLIP SYSTEMS
+    // -------------------------------------------------------------
+    const ExclusionManager = {
+      zones: [],
+      clear: function() { this.zones = []; },
+      addZone: function(x, z, radius) {
+        this.zones.push({ x: x, z: z, radiusSq: radius * radius });
+      },
+      isExcluded: function(x, z, margin = 1.5) {
+        for (let zone of this.zones) {
+          const dx = x - zone.x;
+          const dz = z - zone.z;
+          const minD = Math.sqrt(zone.radiusSq) + margin;
+          if (dx * dx + dz * dz < minD * minD) return true;
+        }
+        return false;
+      }
+    };
+
+    const GroundClampEngine = {
+      clampObject: function(obj, getHeightFn, embedOffset = 0.08) {
+        const box = new THREE.Box3().setFromObject(obj);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+
+        // Sample center terrain height directly via math
+        const targetGroundY = getHeightFn(center.x, center.z);
+        const currentMinY = box.min.y;
+        const deltaY = (targetGroundY - embedOffset) - currentMinY;
+
+        if (Math.abs(deltaY) > 0.01) {
+          obj.position.y += deltaY;
+          obj.updateMatrixWorld(true);
+        }
+      },
+
+      processPropsAsync: function(propsList, getHeightFn, onProgress, onComplete) {
+        let index = 0;
+        const total = propsList.length;
+        const batch = 8;
+
+        function runBatch() {
+          const limit = Math.min(index + batch, total);
+          while (index < limit) {
+            GroundClampEngine.clampObject(propsList[index].obj, getHeightFn, propsList[index].embed);
+            index++;
+          }
+          const p = total > 0 ? Math.floor((index / total) * 100) : 100;
+          if (onProgress) onProgress(p, index, total);
+
+          if (index < total) {
+            requestAnimationFrame(runBatch);
+          } else {
+            if (onComplete) onComplete();
+          }
+        }
+        runBatch();
+      }
+    };
+
+    // -------------------------------------------------------------
+    // PROCEDURAL BUILDINGS & VEGETATION WITH LEVEL FOUNDATIONS
+    // -------------------------------------------------------------
+
+    function createOakTree(scale = 1) {
+      const tree = new THREE.Group();
+      const trunkGeo = new THREE.CylinderGeometry(0.28 * scale, 0.48 * scale, 3.4 * scale, 6);
+      const trunk = new THREE.Mesh(trunkGeo, materials.woodDark);
+      trunk.position.y = 1.2 * scale;
+      trunk.castShadow = true;
+      tree.add(trunk);
+
+      const f1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.9 * scale, 1), materials.leavesGreen1);
+      f1.position.y = 3.6 * scale;
+      f1.castShadow = true;
+      tree.add(f1);
+
+      const f2 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.4 * scale, 1), materials.leavesGreen2);
+      f2.position.set(0.6 * scale, 4.3 * scale, 0.4 * scale);
+      f2.castShadow = true;
+      tree.add(f2);
+      return tree;
+    }
+
+    function createPineTree(scale = 1) {
+      const tree = new THREE.Group();
+      const trunkGeo = new THREE.CylinderGeometry(0.2 * scale, 0.4 * scale, 3.0 * scale, 6);
+      const trunk = new THREE.Mesh(trunkGeo, materials.woodDark);
+      trunk.position.y = 1.0 * scale;
+      trunk.castShadow = true;
+      tree.add(trunk);
+
+      for (let i = 0; i < 3; i++) {
+        const cone = new THREE.Mesh(new THREE.ConeGeometry((2.1 - i * 0.45) * scale, 2.2 * scale, 6), materials.pineNeedles);
+        cone.position.y = (2.0 + i * 1.3) * scale;
+        cone.castShadow = true;
+        tree.add(cone);
+      }
+      return tree;
+    }
+
+    function createCypressTree(scale = 1) {
+      const tree = new THREE.Group();
+      const trunkGeo = new THREE.CylinderGeometry(0.25 * scale, 0.35 * scale, 2.2 * scale, 6);
+      const trunk = new THREE.Mesh(trunkGeo, materials.woodDark);
+      trunk.position.y = 0.8 * scale;
+      tree.add(trunk);
+
+      const foliage = new THREE.Mesh(new THREE.ConeGeometry(1.15 * scale, 6.8 * scale, 7), materials.cypressGreen);
+      foliage.position.y = 4.2 * scale;
+      foliage.castShadow = true;
+      tree.add(foliage);
+      return tree;
+    }
+
+    function createMedievalHouse(isRed = true) {
+      const house = new THREE.Group();
+      // Foundation skirt embedded 1.2 units down prevents floating on edges
+      const base = new THREE.Mesh(new THREE.BoxGeometry(6.4, 2.4, 5.4), materials.stone);
+      base.position.y = 0.6;
+      base.castShadow = true;
+      base.receiveShadow = true;
+      house.add(base);
+
+      const walls = new THREE.Mesh(new THREE.BoxGeometry(5.8, 3.2, 4.8), materials.woodLight);
+      walls.position.y = 3.2;
+      walls.castShadow = true;
+      walls.receiveShadow = true;
+      house.add(walls);
+
+      const roofGeo = new THREE.ConeGeometry(4.5, 2.7, 4);
+      const roof = new THREE.Mesh(roofGeo, isRed ? materials.roofRed : materials.roofBlue);
+      roof.position.y = 5.9;
+      roof.rotation.y = Math.PI / 4;
+      roof.scale.set(1.1, 1, 1.3);
+      roof.castShadow = true;
+      house.add(roof);
+
+      const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.8, 3.2, 0.8), materials.stone);
+      chimney.position.set(1.8, 5.4, 1.1);
+      chimney.castShadow = true;
+      house.add(chimney);
+
+      const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.0, 0.2), materials.woodDark);
+      door.position.set(0, 2.4, 2.5);
+      house.add(door);
+      return house;
+    }
+
+    function createWindmill() {
+      const mill = new THREE.Group();
+      const tower = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 3.8, 12, 8), materials.woodLight);
+      tower.position.y = 5.2;
+      tower.castShadow = true;
+      tower.receiveShadow = true;
+      mill.add(tower);
+
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(2.8, 2.5, 8), materials.roofRed);
+      cap.position.y = 11.8;
+      cap.castShadow = true;
+      mill.add(cap);
+
+      const sailsGroup = new THREE.Group();
+      sailsGroup.position.set(0, 10.0, 2.7);
+
+      const centerPin = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.8, 6), materials.woodDark);
+      centerPin.rotation.x = Math.PI / 2;
+      sailsGroup.add(centerPin);
+
+      for (let i = 0; i < 4; i++) {
+        const bladeArm = new THREE.Group();
+        bladeArm.rotation.z = (Math.PI / 2) * i;
+
+        const strut = new THREE.Mesh(new THREE.BoxGeometry(0.22, 5.8, 0.1), materials.woodDark);
+        strut.position.y = 2.9;
+        bladeArm.add(strut);
+
+        const sailCloth = new THREE.Mesh(new THREE.BoxGeometry(1.2, 4.2, 0.05), materials.marbleWhite);
+        sailCloth.position.set(0.65, 3.4, 0.06);
+        bladeArm.add(sailCloth);
+
+        sailsGroup.add(bladeArm);
+      }
+
+      mill.add(sailsGroup);
+      animatables.push({ obj: sailsGroup, type: 'rotateZ', speed: 0.02 });
+      return mill;
+    }
+
+    function createColumn(height = 6.2) {
+      const col = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.6, 1.7), materials.marbleWhite);
+      base.position.y = 0.3;
+      col.add(base);
+
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.75, height, 10), materials.marbleWhite);
+      shaft.position.y = height / 2 + 0.6;
+      shaft.castShadow = true;
+      col.add(shaft);
+
+      const capital = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 1.8), materials.marbleWhite);
+      capital.position.y = height + 0.8;
+      col.add(capital);
+      return col;
+    }
+
+    function createGreekTemple() {
+      const temple = new THREE.Group();
+
+      // Deep plinth foundation (2.0 down) so the platform is completely solid
+      const plinth = new THREE.Mesh(new THREE.BoxGeometry(24, 2.0, 36), materials.marbleWhite);
+      plinth.position.y = 0.0;
+      plinth.receiveShadow = true;
+      temple.add(plinth);
+
+      for (let i = 0; i < 3; i++) {
+        const step = new THREE.Mesh(new THREE.BoxGeometry(22 - i * 1.2, 0.7, 34 - i * 1.2), materials.marbleWhite);
+        step.position.y = 1.0 + i * 0.7;
+        step.receiveShadow = true;
+        temple.add(step);
+      }
+
+      const colY = 2.9;
+      const colH = 6.2;
+      const xOffsets = [-7.8, 7.8];
+      const zRange = 13.5;
+
+      for (let z = -zRange; z <= zRange; z += 5.4) {
+        for (let x of xOffsets) {
+          const c = createColumn(colH);
+          c.position.set(x, colY, z);
+          temple.add(c);
+        }
+      }
+      for (let x = -7.8; x <= 7.8; x += 5.2) {
+        for (let z of [-zRange, zRange]) {
+          const c = createColumn(colH);
+          c.position.set(x, colY, z);
+          temple.add(c);
+        }
+      }
+
+      const roofBase = new THREE.Mesh(new THREE.BoxGeometry(18.5, 1.2, 31), materials.marbleWhite);
+      roofBase.position.y = colY + colH + 1.2;
+      roofBase.castShadow = true;
+      temple.add(roofBase);
+
+      const pedimentFront = new THREE.Mesh(new THREE.ConeGeometry(11, 3.5, 4), materials.marbleWhite);
+      pedimentFront.position.set(0, colY + colH + 2.8, -15.5);
+      pedimentFront.rotation.y = Math.PI / 4;
+      temple.add(pedimentFront);
+
+      const pedimentBack = pedimentFront.clone();
+      pedimentBack.position.z = 15.5;
+      temple.add(pedimentBack);
+      return temple;
+    }
+
+    function createAdaptiveFenceSegment(x1, z1, x2, z2, getHeightFn) {
+      const y1 = getHeightFn(x1, z1);
+      const y2 = getHeightFn(x2, z2);
+      const fence = new THREE.Group();
+      const length = Math.hypot(x2 - x1, z2 - z1);
+
+      const post1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 1.8, 5), materials.woodDark);
+      post1.position.set(-length / 2, 0.4, 0);
+      post1.castShadow = true;
+      fence.add(post1);
+
+      const post2 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 1.8, 5), materials.woodDark);
+      post2.position.set(length / 2, 0.4, 0);
+      post2.castShadow = true;
+      fence.add(post2);
+
+      const r1 = new THREE.Mesh(new THREE.BoxGeometry(length + 0.2, 0.16, 0.08), materials.woodLight);
+      r1.position.set(0, 0.75, 0);
+      r1.castShadow = true;
+      fence.add(r1);
+
+      const r2 = new THREE.Mesh(new THREE.BoxGeometry(length + 0.2, 0.16, 0.08), materials.woodLight);
+      r2.position.set(0, 0.35, 0);
+      r2.castShadow = true;
+      fence.add(r2);
+
+      fence.position.set((x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2);
+      fence.rotation.y = Math.atan2(x2 - x1, z2 - z1) - Math.PI / 2;
+      fence.rotation.z = -Math.atan2(y2 - y1, length);
+      return fence;
+    }
+
+    function createFullCoverageLines(getHeightFn, mapBoundary = 80) {
+      const group = new THREE.Group();
+      const step = 1.4;
+      for (let x = -mapBoundary; x <= mapBoundary; x += step) {
+        const ry = getHeightFn(x, -2.2) + 0.12;
+        const rd = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.2, 0.35), materials.redZone);
+        rd.position.set(x, ry, -2.2);
+        group.add(rd);
+
+        const by = getHeightFn(x, 2.2) + 0.12;
+        const bd = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.2, 0.35), materials.blueZone);
+        bd.position.set(x, by, 2.2);
+        group.add(bd);
+      }
+      return group;
+    }
+
+    // -------------------------------------------------------------
+    // MAP 1: MEDIEVAL HILLS (Unified Vertex Colors, Level Foundations)
+    // -------------------------------------------------------------
+    function buildMapMedieval(onPropsReady) {
+      scene.background.set(0x82c6eb);
+      scene.fog.color.set(0x82c6eb);
+      sunLight.color.set(0xfff5e0);
+
+      const map = new THREE.Group();
+      const propsToValidate = [];
+      ExclusionManager.clear();
+
+      const segs = 70; // 65% faster than 120, eliminates all lag
+      const terrainGeo = new THREE.PlaneGeometry(280, 280, segs, segs);
+      terrainGeo.rotateX(-Math.PI / 2);
+
+      // Plateau definitions: Cottages and Windmill have leveled foundation terraces
+      const plateaus = [
+        { x: -28, z: -32, r: 6.5, y: 7.2 }, // Windmill
+        { x: 22, z: -35, r: 6.0, y: 6.8 },  // Red House 1
+        { x: 34, z: -26, r: 6.0, y: 6.5 },  // Red House 2
+        { x: -25, z: 34, r: 6.0, y: 6.8 },  // Blue House 1
+        { x: 20, z: 36, r: 6.0, y: 6.5 }    // Blue House 2
+      ];
+
+      plateaus.forEach(p => ExclusionManager.addZone(p.x, p.z, p.r + 1.0));
+
+      function getMedievalHeight(x, z) {
+        const r = Math.hypot(x, z);
+
+        // Smooth perimeter mountain wall (r > 60)
+        let mountainRing = 0;
+        if (r > 60) {
+          const f = Math.min(1.0, (r - 60) / 45);
+          const sf = f * f * (3 - 2 * f);
+          const crag = Math.sin(x * 0.14) * Math.cos(z * 0.14) * 6 + Math.sin(x * 0.28) * 3;
+          mountainRing = sf * 46 + sf * crag;
+        }
+
+        const redRidge = Math.exp(-Math.pow((z + 32) / 22, 2)) * 7.5;
+        const blueRidge = Math.exp(-Math.pow((z - 32) / 22, 2)) * 7.5;
+        const valley = -Math.exp(-Math.pow(z / 16, 2)) * 3.0;
+        const roll = Math.sin(x * 0.05) * 3.0 + Math.cos(z * 0.05) * 1.5;
+        const naturalH = redRidge + blueRidge + valley + roll;
+
+        // Flatten under buildings
+        for (let p of plateaus) {
+          const dist = Math.hypot(x - p.x, z - p.z);
+          if (dist < p.r) {
+            const t = dist / p.r;
+            return p.y * (1 - t * t) + (naturalH + mountainRing) * (t * t);
+          }
+        }
+        return naturalH + mountainRing;
+      }
+
+      // Sculpt vertices & apply seamless vertex colors (grass -> rock -> snow)
+      const pos = terrainGeo.attributes.position;
+      const count = pos.count;
+      const colors = new Float32Array(count * 3);
+
+      for (let i = 0; i < count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        const y = getMedievalHeight(x, z);
+        pos.setY(i, y);
+
+        // Color by elevation: eliminates "mountains in the green ones"
+        let rVal, gVal, bVal;
+        if (y < 8.0) {
+          // Lush green grass
+          rVal = 0.35; gVal = 0.65; bVal = 0.22;
+        } else if (y < 22.0) {
+          // Transition to mountain rock cliff
+          const t = (y - 8.0) / 14.0;
+          rVal = 0.35 * (1 - t) + 0.38 * t;
+          gVal = 0.65 * (1 - t) + 0.42 * t;
+          bVal = 0.22 * (1 - t) + 0.45 * t;
+        } else if (y < 35.0) {
+          // Dark craggy rock
+          rVal = 0.38; gVal = 0.42; bVal = 0.45;
+        } else {
+          // Snow-capped peaks
+          const t = Math.min(1.0, (y - 35.0) / 12.0);
+          rVal = 0.38 * (1 - t) + 0.92 * t;
+          gVal = 0.42 * (1 - t) + 0.94 * t;
+          bVal = 0.45 * (1 - t) + 0.97 * t;
+        }
+
+        colors[i * 3] = rVal;
+        colors[i * 3 + 1] = gVal;
+        colors[i * 3 + 2] = bVal;
+      }
+
+      terrainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      terrainGeo.computeVertexNormals();
+
+      const terrain = new THREE.Mesh(terrainGeo, materials.terrainVertex);
+      terrain.receiveShadow = true;
+      map.add(terrain);
+
+      map.add(createFullCoverageLines(getMedievalHeight, 80));
+
+      // Windmill on Red High Ridge
+      const windmill = createWindmill();
+      windmill.position.set(-28, 7.2, -32);
+      map.add(windmill);
+      propsToValidate.push({ obj: windmill, embed: 0.1 });
+
+      // Cottages seated squarely on flat terraces
+      const houseConfigs = [
+        { isRed: true, x: 22, z: -35, rot: -Math.PI / 5, y: 6.8 },
+        { isRed: true, x: 34, z: -26, rot: Math.PI / 4, y: 6.5 },
+        { isRed: false, x: -25, z: 34, rot: Math.PI / 3, y: 6.8 },
+        { isRed: false, x: 20, z: 36, rot: -Math.PI / 6, y: 6.5 }
+      ];
+
+      houseConfigs.forEach(hc => {
+        const h = createMedievalHouse(hc.isRed);
+        h.position.set(hc.x, hc.y, hc.z);
+        h.rotation.y = hc.rot;
+        map.add(h);
+        propsToValidate.push({ obj: h, embed: 0.1 });
+      });
+
+      // Slope-Adaptive Fences
+      const fenceRun = [-18, -14, -10, 6, 10, 14];
+      for (let fx of fenceRun) {
+        if (!ExclusionManager.isExcluded(fx, -11, 2.0)) {
+          map.add(createAdaptiveFenceSegment(fx, -11, fx + 3.8, -11, getMedievalHeight));
+        }
+      }
+
+      // Foliage with Exclusion Zone protection
+      const treeCandidates = [
+        [-42, -18, 'pine'], [-35, -6, 'oak'], [-48, 20, 'pine'], [-36, 32, 'oak'],
+        [44, -16, 'oak'], [38, 14, 'pine'], [46, 28, 'pine'], [10, -44, 'oak'],
+        [-14, -46, 'pine'], [6, 44, 'pine'], [-6, 42, 'oak'], [-24, 6, 'oak'],
+        [28, -6, 'oak'], [-52, 0, 'pine'], [52, -2, 'pine'], [-18, -22, 'pine'],
+        [18, 22, 'oak']
+      ];
+
+      treeCandidates.forEach(([tx, tz, type]) => {
+        if (!ExclusionManager.isExcluded(tx, tz, 2.0)) {
+          const scale = 0.85 + Math.random() * 0.45;
+          const tree = type === 'pine' ? createPineTree(scale) : createOakTree(scale);
+          tree.position.set(tx, getMedievalHeight(tx, tz), tz);
+          map.add(tree);
+          propsToValidate.push({ obj: tree, embed: 0.12 });
+          ExclusionManager.addZone(tx, tz, 2.5); // Prevent tree-on-tree overlap
+        }
+      });
+
+      onPropsReady({
+        group: map,
+        getHeight: getMedievalHeight,
+        props: propsToValidate,
+        initCamPos: new THREE.Vector3(0, 40, 85),
+        initLookAt: new THREE.Vector3(0, 5, 0)
+      });
+    }
+
+    // -------------------------------------------------------------
+    // MAP 2: ANCIENT OLYMPUS (Level Temple Plateaus, No Floating)
+    // -------------------------------------------------------------
+    function buildMapAncient(onPropsReady) {
+      scene.background.set(0xeb9c66);
+      scene.fog.color.set(0xeb9c66);
+      sunLight.color.set(0xffdfa8);
+
+      const map = new THREE.Group();
+      const propsToValidate = [];
+      ExclusionManager.clear();
+
+      const segs = 70;
+      const terrainGeo = new THREE.PlaneGeometry(280, 280, segs, segs);
+      terrainGeo.rotateX(-Math.PI / 2);
+
+      // Temple Plateaus (Width 28, Depth 40) at elevation 6.5
+      const templePlateaus = [
+        { x: 0, z: -38, w: 26, d: 38, y: 6.5 }, // Red Acropolis Temple
+        { x: 0, z: 38, w: 26, d: 38, y: 6.5 }   // Blue Acropolis Temple
+      ];
+
+      templePlateaus.forEach(p => ExclusionManager.addZone(p.x, p.z, 20.0));
+
+      function getAncientHeight(x, z) {
+        const r = Math.hypot(x, z);
+
+        // Impassable sandstone canyon perimeter walls
+        let canyonWall = 0;
+        if (r > 65) {
+          const f = Math.min(1.0, (r - 65) / 45);
+          const sf = f * f * (3 - 2 * f);
+          const rocky = Math.sin(x * 0.16) * Math.cos(z * 0.16) * 5 + Math.cos(x * 0.3) * 3;
+          canyonWall = sf * 48 + sf * rocky;
+        }
+
+        const centerValley = (Math.abs(z) < 14) ? -2.2 : 0;
+        const flankSlopes = Math.pow(x / 45, 2) * 3.5;
+        const naturalH = centerValley + flankSlopes + canyonWall;
+
+        // Guaranteed level foundation for Greek Temples
+        for (let p of templePlateaus) {
+          const dx = Math.abs(x - p.x);
+          const dz = Math.abs(z - p.z);
+          const edgeDist = Math.max(dx - p.w / 2, dz - p.d / 2, 0);
+
+          if (edgeDist === 0) return p.y;
+          if (edgeDist < 7.0) {
+            const t = edgeDist / 7.0;
+            return p.y * (1 - t) + naturalH * t;
+          }
+        }
+        return naturalH;
+      }
+
+      // Sculpt vertices with Sandstone Canyon colors
+      const pos = terrainGeo.attributes.position;
+      const count = pos.count;
+      const colors = new Float32Array(count * 3);
+
+      for (let i = 0; i < count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        const y = getAncientHeight(x, z);
+        pos.setY(i, y);
+
+        let rVal, gVal, bVal;
+        if (y < 4.0) {
+          // Warm Mediterranean sand
+          rVal = 0.82; gVal = 0.64; bVal = 0.40;
+        } else if (y < 22.0) {
+          // Terracotta sandstone cliffs
+          const t = (y - 4.0) / 18.0;
+          rVal = 0.82 * (1 - t) + 0.65 * t;
+          gVal = 0.64 * (1 - t) + 0.42 * t;
+          bVal = 0.40 * (1 - t) + 0.25 * t;
+        } else {
+          // High mountain canyon rim
+          const t = Math.min(1.0, (y - 22.0) / 20.0);
+          rVal = 0.65 * (1 - t) + 0.52 * t;
+          gVal = 0.42 * (1 - t) + 0.32 * t;
+          bVal = 0.25 * (1 - t) + 0.20 * t;
+        }
+
+        colors[i * 3] = rVal;
+        colors[i * 3 + 1] = gVal;
+        colors[i * 3 + 2] = bVal;
+      }
+
+      terrainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      terrainGeo.computeVertexNormals();
+
+      const terrain = new THREE.Mesh(terrainGeo, materials.terrainVertex);
+      terrain.receiveShadow = true;
+      map.add(terrain);
+
+      map.add(createFullCoverageLines(getAncientHeight, 80));
+
+      // Red Acropolis Temple placed firmly on flat pad (no floating!)
+      const grandTemple = createGreekTemple();
+      grandTemple.position.set(0, 6.5, -38);
+      grandTemple.scale.set(0.9, 0.9, 0.9);
+      map.add(grandTemple);
+      propsToValidate.push({ obj: grandTemple, embed: 0.1 });
+
+      // Blue Acropolis Temple
+      const blueTemple = createGreekTemple();
+      blueTemple.position.set(0, 6.5, 38);
+      blueTemple.rotation.y = Math.PI;
+      blueTemple.scale.set(0.9, 0.9, 0.9);
+      map.add(blueTemple);
+      propsToValidate.push({ obj: blueTemple, embed: 0.1 });
+
+      // Broken / Fallen Columns in the Arena Valley (Never inside temple footprints)
+      for (let i = 0; i < 7; i++) {
+        const fx = (i - 3) * 14;
+        const fz = (i % 2 === 0 ? 6 : -6);
+        if (!ExclusionManager.isExcluded(fx, fz, 2.0)) {
+          const fallenCol = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 4.5, 8), materials.marbleWhite);
+          fallenCol.position.set(fx, getAncientHeight(fx, fz) + 0.6, fz);
+          fallenCol.rotation.z = Math.PI / 2;
+          fallenCol.rotation.y = Math.random() * Math.PI;
+          fallenCol.castShadow = true;
+          map.add(fallenCol);
+          propsToValidate.push({ obj: fallenCol, embed: 0.15 });
+          ExclusionManager.addZone(fx, fz, 3.5);
+        }
+      }
+
+      // Mediterranean Cypress Trees (Guaranteed outside temple zones)
+      const cypressPositions = [
+        [-24, -20], [-32, -14], [24, -20], [32, -14],
+        [-24, 20], [-32, 14], [24, 20], [32, 14],
+        [-40, 0], [40, 0], [-44, -8], [44, 8],
+        [-28, -32], [28, -32], [-28, 32], [28, 32]
+      ];
+
+      cypressPositions.forEach(([cx, cz]) => {
+        if (!ExclusionManager.isExcluded(cx, cz, 2.0)) {
+          const cTree = createCypressTree(0.95 + Math.random() * 0.4);
+          cTree.position.set(cx, getAncientHeight(cx, cz), cz);
+          map.add(cTree);
+          propsToValidate.push({ obj: cTree, embed: 0.12 });
+          ExclusionManager.addZone(cx, cz, 3.0);
+        }
+      });
+
+      onPropsReady({
+        group: map,
+        getHeight: getAncientHeight,
+        props: propsToValidate,
+        initCamPos: new THREE.Vector3(45, 42, 75),
+        initLookAt: new THREE.Vector3(0, 4, 0)
+      });
+    }
+
+    // -------------------------------------------------------------
+    // MAP LOADING PIPELINE
+    // -------------------------------------------------------------
+    const loadingScreen = document.getElementById('loading-screen');
+    const loadingBarFill = document.getElementById('loading-bar-fill');
+    const loadingPercentText = document.getElementById('loading-percent-text');
+    const loadingStatusText = document.getElementById('loading-status-text');
+
+    function updateLoadingUI(percent, status) {
+      loadingBarFill.style.width = `${percent}%`;
+      loadingPercentText.textContent = `${percent}%`;
+      if (status) loadingStatusText.textContent = status;
+    }
+
+    function loadMap(mapId) {
+      TABS.isLoading = true;
+      TABS.currentMapId = mapId;
+      animatables = [];
+      TABS.units = [];
+
+      loadingScreen.classList.remove('hidden');
+      updateLoadingUI(10, "Generating Terrain & Mountain Ranges...");
+
+      if (mapId === 1) {
+        document.getElementById('btn-map-1').classList.add('active');
+        document.getElementById('btn-map-2').classList.remove('active');
+      } else {
+        document.getElementById('btn-map-2').classList.add('active');
+        document.getElementById('btn-map-1').classList.remove('active');
+      }
+
+      while (currentMapGroup.children.length > 0) {
+        currentMapGroup.remove(currentMapGroup.children[0]);
+      }
+
+      setTimeout(() => {
+        const buildFn = mapId === 1 ? buildMapMedieval : buildMapAncient;
+        buildFn((mapData) => {
+          activeMapData = mapData;
+          currentMapGroup.add(mapData.group);
+
+          updateLoadingUI(40, "Verifying Ground Clamping & Anti-NoClip...");
+
+          GroundClampEngine.processPropsAsync(
+            mapData.props,
+            mapData.getHeight,
+            (percent, index, total) => {
+              const p = 40 + Math.floor(percent * 0.55);
+              updateLoadingUI(p, `Ground-Clamping Props (${index}/${total})...`);
+            },
+            () => {
+              updateLoadingUI(100, "Battlefield Ready!");
+              camera.position.copy(mapData.initCamPos);
+              camera.lookAt(mapData.initLookAt);
+
+              const dir = new THREE.Vector3().subVectors(mapData.initLookAt, camera.position).normalize();
+              cameraYaw = Math.atan2(-dir.x, -dir.z);
+              cameraPitch = Math.asin(dir.y);
+
+              setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                TABS.isLoading = false;
+                TABS.hooks.onMapLoaded.forEach(fn => fn(mapId));
+              }, 200);
+            }
+          );
+        });
+      }, 50);
+    }
+    TABS.loadMap = loadMap;
+
+    // -------------------------------------------------------------
+    // MOBILE CONTROLS & MOVABLE UI SYSTEM
+    // -------------------------------------------------------------
+    let cameraYaw = 0;
+    let cameraPitch = -0.3;
+    let moveSpeedMultiplier = 1;
+    const moveInput = { forward: 0, right: 0, up: 0 };
+
+    // Virtual Joystick
+    const joystickZone = document.getElementById('joystick-zone');
+    const joystickKnob = document.getElementById('joystick-knob');
+    let joystickActive = false;
+    let joystickTouchId = null;
+    let joystickOrigin = { x: 0, y: 0 };
+    const maxRadius = 45;
+
+    joystickZone.addEventListener('pointerdown', (e) => {
+      if (uiEditMode) return;
+      joystickActive = true;
+      joystickTouchId = e.pointerId;
+      const rect = joystickZone.getBoundingClientRect();
+      joystickOrigin = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      updateJoystick(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (joystickActive && e.pointerId === joystickTouchId) {
+        updateJoystick(e.clientX, e.clientY);
+      }
+    });
+
+    function endJoystick(e) {
+      if (e.pointerId === joystickTouchId) {
+        joystickActive = false;
+        joystickTouchId = null;
+        joystickKnob.style.transform = `translate(0px, 0px)`;
+        moveInput.forward = 0;
+        moveInput.right = 0;
+      }
+    }
+    window.addEventListener('pointerup', endJoystick);
+    window.addEventListener('pointercancel', endJoystick);
+
+    function updateJoystick(clientX, clientY) {
+      const dx = clientX - joystickOrigin.x;
+      const dy = clientY - joystickOrigin.y;
+      const dist = Math.min(Math.hypot(dx, dy), maxRadius);
+      const angle = Math.atan2(dy, dx);
+      const cx = Math.cos(angle) * dist;
+      const cy = Math.sin(angle) * dist;
+
+      joystickKnob.style.transform = `translate(${cx}px, ${cy}px)`;
+      moveInput.right = cx / maxRadius;
+      moveInput.forward = -cy / maxRadius;
+    }
+
+    // Touch Screen Look
+    let lookActive = false;
+    let lookTouchId = null;
+    let lastLookX = 0;
+    let lastLookY = 0;
+
+    window.addEventListener('pointerdown', (e) => {
+      if (uiEditMode) return;
+      if (e.target.closest('#top-hud') || e.target.closest('#action-panel') || e.target.closest('#joystick-zone') || e.target.closest('#settings-btn') || e.target.closest('#settings-modal') || e.target.closest('#loading-screen')) return;
+
+      lookActive = true;
+      lookTouchId = e.pointerId;
+      lastLookX = e.clientX;
+      lastLookY = e.clientY;
+      document.getElementById('look-hint').style.opacity = '0';
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (lookActive && e.pointerId === lookTouchId) {
+        const dx = e.clientX - lastLookX;
+        const dy = e.clientY - lastLookY;
+        lastLookX = e.clientX;
+        lastLookY = e.clientY;
+
+        cameraYaw -= dx * 0.0045;
+        cameraPitch -= dy * 0.0045;
+        cameraPitch = Math.max(-Math.PI / 2.05, Math.min(Math.PI / 2.05, cameraPitch));
+      }
+    });
+
+    function endLook(e) {
+      if (e.pointerId === lookTouchId) {
+        lookActive = false;
+        lookTouchId = null;
+      }
+    }
+    window.addEventListener('pointerup', endLook);
+    window.addEventListener('pointercancel', endLook);
+
+    // Altitude & Speed Buttons
+    const btnUp = document.getElementById('btn-up');
+    const btnDown = document.getElementById('btn-down');
+    const btnSpeed = document.getElementById('btn-speed');
+
+    function bindHoldAction(button, value) {
+      const start = (e) => { if (uiEditMode) return; e.preventDefault(); moveInput.up = value; button.classList.add('active'); };
+      const stop = (e) => { if (uiEditMode) return; e.preventDefault(); moveInput.up = 0; button.classList.remove('active'); };
+      button.addEventListener('pointerdown', start);
+      button.addEventListener('pointerup', stop);
+      button.addEventListener('pointerleave', stop);
+      button.addEventListener('pointercancel', stop);
+    }
+    bindHoldAction(btnUp, 1);
+    bindHoldAction(btnDown, -1);
+
+    btnSpeed.addEventListener('click', () => {
+      if (uiEditMode) return;
+      if (moveSpeedMultiplier === 1) {
+        moveSpeedMultiplier = 2.2;
+        btnSpeed.textContent = '2.2x';
+        btnSpeed.style.borderColor = '#ffd54f';
+      } else {
+        moveSpeedMultiplier = 1;
+        btnSpeed.textContent = '1x';
+        btnSpeed.style.borderColor = 'rgba(255,255,255,0.3)';
+      }
+    });
+
+    // -------------------------------------------------------------
+    // DRAGGABLE UI / MOVABLE LAYOUT SYSTEM
+    // -------------------------------------------------------------
+    let uiEditMode = false;
+    const draggableElements = [
+      document.getElementById('joystick-zone'),
+      document.getElementById('action-panel'),
+      document.getElementById('top-hud'),
+      document.getElementById('settings-btn')
+    ];
+
+    function makeDraggable(element, storageKey) {
+      let isDragging = false;
+      let startX, startY, origLeft, origTop;
+
+      // Restore saved position
+      const saved = localStorage.getItem('tabs_ui_' + storageKey);
+      if (saved) {
+        try {
+          const pos = JSON.parse(saved);
+          element.style.left = pos.left;
+          element.style.top = pos.top;
+          element.style.bottom = 'auto';
+          element.style.right = 'auto';
+          if (element.id === 'top-hud') element.style.transform = 'none';
+        } catch (e) {}
+      }
+
+      element.addEventListener('pointerdown', (e) => {
+        if (!uiEditMode) return;
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        const rect = element.getBoundingClientRect();
+        origLeft = rect.left;
+        origTop = rect.top;
+        element.setPointerCapture(e.pointerId);
+        e.stopPropagation();
+      });
+
+      element.addEventListener('pointermove', (e) => {
+        if (!isDragging || !uiEditMode) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        const newL = Math.max(10, Math.min(window.innerWidth - element.offsetWidth - 10, origLeft + dx));
+        const newT = Math.max(10, Math.min(window.innerHeight - element.offsetHeight - 10, origTop + dy));
+
+        element.style.left = `${newL}px`;
+        element.style.top = `${newT}px`;
+        element.style.bottom = 'auto';
+        element.style.right = 'auto';
+        if (element.id === 'top-hud') element.style.transform = 'none';
+      });
+
+      function stopDrag(e) {
+        if (isDragging) {
+          isDragging = false;
+          localStorage.setItem('tabs_ui_' + storageKey, JSON.stringify({
+            left: element.style.left,
+            top: element.style.top
+          }));
+        }
+      }
+      element.addEventListener('pointerup', stopDrag);
+      element.addEventListener('pointercancel', stopDrag);
+    }
+
+    makeDraggable(document.getElementById('joystick-zone'), 'joystick');
+    makeDraggable(document.getElementById('action-panel'), 'action_panel');
+    makeDraggable(document.getElementById('top-hud'), 'top_hud');
+    makeDraggable(document.getElementById('settings-btn'), 'settings_btn');
+
+    // -------------------------------------------------------------
+    // SETTINGS MODAL HANDLERS
+    // -------------------------------------------------------------
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const btnCloseSettings = document.getElementById('btn-close-settings');
+    const btnToggleEditUI = document.getElementById('btn-toggle-edit-ui');
+    const btnResetUI = document.getElementById('btn-reset-ui');
+    const btnPresetLefthand = document.getElementById('btn-preset-lefthand');
+    const uiEditNotice = document.getElementById('ui-edit-notice');
+
+    settingsBtn.addEventListener('click', () => {
+      if (uiEditMode) {
+        // Exit UI edit mode
+        uiEditMode = false;
+        uiEditNotice.style.display = 'none';
+        draggableElements.forEach(el => el.classList.remove('ui-draggable-mode'));
+        btnToggleEditUI.textContent = '✏️ Move UI Controls';
+        return;
+      }
+      settingsModal.classList.add('active');
+    });
+
+    btnCloseSettings.addEventListener('click', () => {
+      settingsModal.classList.remove('active');
+    });
+
+    btnToggleEditUI.addEventListener('click', () => {
+      uiEditMode = !uiEditMode;
+      settingsModal.classList.remove('active');
+      if (uiEditMode) {
+        uiEditNotice.style.display = 'block';
+        draggableElements.forEach(el => el.classList.add('ui-draggable-mode'));
+      } else {
+        uiEditNotice.style.display = 'none';
+        draggableElements.forEach(el => el.classList.remove('ui-draggable-mode'));
+      }
+    });
+
+    btnResetUI.addEventListener('click', () => {
+      ['joystick', 'action_panel', 'top_hud', 'settings_btn'].forEach(k => localStorage.removeItem('tabs_ui_' + k));
+      location.reload();
+    });
+
+    btnPresetLefthand.addEventListener('click', () => {
+      const jz = document.getElementById('joystick-zone');
+      const ap = document.getElementById('action-panel');
+      jz.style.left = 'auto'; jz.style.right = '25px'; jz.style.bottom = '25px'; jz.style.top = 'auto';
+      ap.style.left = '20px'; ap.style.right = 'auto'; ap.style.bottom = '25px'; ap.style.top = 'auto';
+      localStorage.setItem('tabs_ui_joystick', JSON.stringify({ left: `${window.innerWidth - 155}px`, top: `${window.innerHeight - 155}px` }));
+      localStorage.setItem('tabs_ui_action_panel', JSON.stringify({ left: '20px', top: `${window.innerHeight - 180}px` }));
+      settingsModal.classList.remove('active');
+    });
+
+    // Shadow Quality Toggle (Instant 60fps boost on mobile)
+    const btnShadowOff = document.getElementById('btn-shadow-off');
+    const btnShadowHigh = document.getElementById('btn-shadow-high');
+
+    btnShadowOff.addEventListener('click', () => {
+      sunLight.castShadow = false;
+      renderer.shadowMap.enabled = false;
+      btnShadowOff.classList.add('active');
+      btnShadowHigh.classList.remove('active');
+    });
+
+    btnShadowHigh.addEventListener('click', () => {
+      renderer.shadowMap.enabled = true;
+      sunLight.castShadow = true;
+      btnShadowHigh.classList.add('active');
+      btnShadowOff.classList.remove('active');
+    });
+
+    // Desktop Keyboard Controls
+    const keys = {};
+    window.addEventListener('keydown', (e) => { keys[e.code] = true; });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    function processKeyboard() {
+      let f = 0, r = 0, u = 0;
+      if (keys['KeyW'] || keys['ArrowUp']) f += 1;
+      if (keys['KeyS'] || keys['ArrowDown']) f -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) r += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) r -= 1;
+      if (keys['Space'] || keys['KeyE']) u += 1;
+      if (keys['ShiftLeft'] || keys['KeyQ']) u -= 1;
+
+      if (!joystickActive) {
+        moveInput.forward = f;
+        moveInput.right = r;
+      }
+      if (u !== 0) moveInput.up = u;
+    }
+
+    document.getElementById('btn-map-1').addEventListener('click', () => {
+      if (TABS.currentMapId !== 1 && !TABS.isLoading) loadMap(1);
+    });
+    document.getElementById('btn-map-2').addEventListener('click', () => {
+      if (TABS.currentMapId !== 2 && !TABS.isLoading) loadMap(2);
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // -------------------------------------------------------------
+    // MAIN ZERO-LAG ENGINE LOOP
+    // -------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.1);
+      processKeyboard();
+
+      const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+      euler.y = cameraYaw;
+      euler.x = cameraPitch;
+      camera.quaternion.setFromEuler(euler);
+
+      const speed = 30 * moveSpeedMultiplier * delta;
+      const forwardVec = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, cameraYaw, 0));
+      const rightVec = new THREE.Vector3(1, 0, 0).applyEuler(new THREE.Euler(0, cameraYaw, 0));
+
+      if (moveInput.forward !== 0) camera.position.addScaledVector(forwardVec, moveInput.forward * speed);
+      if (moveInput.right !== 0) camera.position.addScaledVector(rightVec, moveInput.right * speed);
+      if (moveInput.up !== 0) camera.position.y += moveInput.up * speed;
+
+      // Zero-lag instant mathematical ground bound check (NO raycasting in loop!)
+      const groundY = TABS.terrain.getHeightAt(camera.position.x, camera.position.z);
+      if (camera.position.y < groundY + 1.8) {
+        camera.position.y = groundY + 1.8;
+      }
+
+      for (let item of animatables) {
+        if (item.type === 'rotateZ') item.obj.rotation.z += item.speed;
+      }
+
+      TABS.update(delta);
+      renderer.render(scene, camera);
+    }
+
+    loadMap(1);
+    animate();
+  </script>
+</body>
+</html>
